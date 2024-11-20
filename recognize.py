@@ -29,7 +29,7 @@ def split_data():
     # Defining folders
     source_path = r'C:/mgr/data/Teeth Segmentation PNG/d2/img'
     train_path = r'C:/mgr/data/TRAIN_IMAGES'
-    valid_path = r'C:/mgr/data/2D_XRAY/VALID_IMAGES'
+    valid_path = r'C:/mgr/data/VALID_IMAGES'
 
     # Getting list of files
     image_files = [f for f in os.listdir(source_path) if f.endswith('.jpg')]
