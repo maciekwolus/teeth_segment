@@ -1,6 +1,8 @@
 import cv2
 import os
 import shutil
+import numpy as np
+import json
 
 # Test function to display an image using OpenCV.
 def show_image(image_path):
@@ -24,12 +26,24 @@ def copy_files(source_path, file_list, destination_dir):
         if not os.path.exists(dest_path):  # Check if file already exists
             shutil.copy(src_path, dest_path)
 
+# Function to clear a directory
+def clear_directory(directory_path):
+    if os.path.exists(directory_path):
+        for file in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, file)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Remove the file
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Remove the folder
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+
 # Function to split photos between folders
-def split_data():
-    # Defining folders
-    source_path = r'C:/mgr/data/Teeth Segmentation PNG/d2/img'
-    train_path = r'C:/mgr/data/TRAIN_IMAGES'
-    valid_path = r'C:/mgr/data/VALID_IMAGES'
+def split_data(source_path, train_path, valid_path):
+    # Clear existing data in train and valid directories
+    clear_directory(train_path)
+    clear_directory(valid_path)
 
     # Getting list of files
     image_files = [f for f in os.listdir(source_path) if f.endswith('.jpg')]
@@ -56,14 +70,71 @@ def split_data():
     print(f"Training images: {len(train_files)}")
     print(f"Validation images: {len(valid_files)}")
 
+# Function to convert polygons from JSON to jpg
+def json_to_mask(json_folder, output_folder, image_shape):
+    # Create the directory if it does not exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)  
+
+    # Clear existing data in train and valid directories
+    clear_directory(output_folder)
+    
+    # List of all files
+    json_files = [f for f in os.listdir(json_folder) if f.endswith('.json')]
+
+    # Iterate through JSONs
+    for json_file in json_files:
+        json_path = os.path.join(json_folder, json_file)
+
+        # Open JSONs
+        with open(json_path, 'r') as file:
+            data = json.load(file)
+
+        # Extract polygons
+        # Format like that - {'objects': [{'points': {'exterior': [[x1, y1], [x2, y2], ...]}}, ...]}
+        coordinates = []
+        for obj in data.get('objects', []):
+            if 'points' in obj and 'exterior' in obj['points']:
+                coordinates.append(np.array(obj['points']['exterior'], dtype=np.int32))
+
+        # White starting mask
+        mask = np.ones(image_shape, dtype=np.uint8) * 255
+
+        # Draw polygons on mask
+        for polygon in coordinates:
+            cv2.fillPoly(mask, [polygon], color=(0)) # Fulfill inside of polygon with black
+            cv2.polylines(mask, [polygon], isClosed=True, color=(255), thickness=3)  # Draw white contur
+
+        # Reverse colors
+        mask = cv2.bitwise_not(mask)
+
+        # Save masks
+        mask_filename = os.path.splitext(os.path.splitext(json_file)[0])[0]
+        mask_path = os.path.join(output_folder, mask_filename + ".jpg")  # Adding .jpg
+        cv2.imwrite(mask_path, mask)
+
+
+
 def main():
     # Call test function to display the image
     # show_image(r"C:/mgr/data/kakashi.png")
     
-    data_root_path = r'C:/mgr/data' # idk if needed
+    # Defining data folders
+    data_root_path = r'C:/mgr/data'
+    source_path = data_root_path + r'/Teeth Segmentation PNG/d2/img'
+    train_path = data_root_path + r'/TRAIN_IMAGES'
+    valid_path = data_root_path + r'/VALID_IMAGES'
+    
+    # Defining mask data
+    masks_path = data_root_path + r'/MASKS'
+    json_path = data_root_path + r'/Teeth Segmentation PNG/d2/ann'
+    image_shape = (1024, 2041)
 
     # Split data into train and valid data
-    split_data()
+    split_data(source_path, train_path, valid_path)
+
+    # Create masks
+    json_to_mask(json_path, masks_path, image_shape)
 
 if __name__ == "__main__":
     main()
