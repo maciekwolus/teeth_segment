@@ -3,11 +3,18 @@ import os
 import shutil # copying data
 import numpy as np
 import json
+import torch
+import torch.nn as nn
 
 from datasets import Dataset, DatasetDict, Image # working with datasets
 from torchvision.transforms import ColorJitter # randomly modify brightness, contrast and colors of image
 from transformers import SegformerImageProcessor # function from Hugging Face to modify images at the beggining for Segformer model
+
 from transformers import SegformerForSemanticSegmentation
+from transformers import SegformerFeatureExtractor
+from transformers import TrainingArguments, Trainer
+from torchvision.transforms import ColorJitter, Resize, Compose, PILToTensor
+from torchvision.transforms.functional import to_tensor
 
 # Test function to display an image using OpenCV.
 def show_image(image_path):
@@ -164,6 +171,36 @@ def val_transforms(example_batch, feature_extractor): # just like up, but whitou
     inputs = feature_extractor(images, labels)
     return inputs
 
+'''
+- preds: Przewidywane etykiety segmentacji (wyjścia modelu).
+- labels: Prawdziwe etykiety segmentacyjne (maska segmentacji).
+- num_labels: Liczba klas (etykiet), które są segmentowane (np. "tło", "zęby").
+- ignore_index: Indeks klasy, którą należy zignorować podczas obliczeń (zwykle np. 255, jeśli oznacza brak danych w masce segmentacyjnej).
+'''
+# Funkcja do obliczenia wyniku Dice'a (2*TP w liczniku, 2*TP+FP+FN w mianowniku)
+def dice_score(preds, labels, num_labels, ignore_index):
+    dice_scores = []
+    for label in range(num_labels):
+        if label == ignore_index:
+            continue
+        pred_label = preds == label
+        true_label = labels == label
+
+        if true_label.sum() == 0 and pred_label.sum() == 0:
+            dice_scores.append(0)
+        else:
+            dice = (2.0 * (pred_label & true_label).sum()) / (pred_label.sum() + true_label.sum())
+            dice_scores.append(dice)
+
+    return np.mean(dice_scores)
+
+'''
+- eval_pred: To wynik predykcji modelu, zazwyczaj para (logity, etykiety) używane podczas ewaluacji.
+Logity to surowe wyjścia modelu (przed softmaxem), które zawierają wartości
+prawdopodobieństwa dla każdej klasy, a etykiety to prawdziwe maski segmentacyjne.
+'''
+
+
 def main():
     # Call test function to display the image
     # show_image(r"C:/mgr/data/kakashi.png")
@@ -200,7 +237,7 @@ def main():
     class_dict = {"background": 0, "teeth": 1} # background is 0, teeth has 1
     id2label = {idx: key for idx, key in enumerate(list(class_dict.keys()))} # reverse of class_dict (for model)
     label2id = {v: k for k, v in id2label.items()} # for model
-    num_labels = len(id2label) # idk if needed
+    num_labels = len(id2label) # needed for compute_metrics
     
     # Splitting files to train and valid
     train_image_paths, train_mask_paths = get_image_mask_paths(train_path, masks_path)
@@ -240,6 +277,98 @@ def main():
         id2label=id2label,
         label2id=label2id
     )
+
+    # Ścieżka do zapisywania tego co się nauczy 
+    # TODO czy ona sie stworzy sama?
+    save_path = data_root_path + r'/segformer-teeth_segment_10ep_b4'
+
+    # Wyłączenie integracji z Weights & Biases (W&B) (bez tego chciało ode mnie jakiś klucz czy coś)
+    os.environ["WANDB_DISABLED"] = "true"
+
+    # Definiowanie liczby epok
+    n_epochs = 10
+
+    """
+    - output_dir=save_path: Miejsce, w którym będą zapisywane wyniki treningu (np. checkpointy, wytrenowany model). Wartość save_path to ścieżka zdefiniowana wcześniej (np. "segformer-teeth_segment_10ep_b4").
+    - learning_rate=0.0001: Ustawia wartość współczynnika uczenia modelu (ang. learning rate). Mniejszy współczynnik uczenia pozwala modelowi uczyć się wolniej, ale bardziej precyzyjnie.
+    - num_train_epochs=n_epochs: Liczba epok trenowania. Tutaj jest to 10 epok.
+    - per_device_train_batch_size=2: Liczba próbek danych używanych na każde urządzenie (np. GPU) w jednej iteracji trenowania. Tutaj model używa 2 próbek na urządzenie.
+    - per_device_eval_batch_size=2: Liczba próbek danych używanych podczas walidacji na każde urządzenie. Podobnie jak w trenowaniu, również tutaj wartość to 2.
+    - save_total_limit=3: Limit liczby zapisanych checkpointów (modeli). Starsze checkpointy zostaną usunięte, aby oszczędzić miejsce.
+    - evaluation_strategy="steps": Ewaluacja modelu odbywa się co pewną liczbę kroków (zamiast na końcu każdej epoki). To oznacza, że ewaluacja będzie przeprowadzana co eval_steps kroków.
+    - save_strategy="steps": Podobnie jak ewaluacja, zapisywanie modeli (checkpointów) odbywa się co save_steps kroków.
+    - save_steps=20: Model będzie zapisywany co 20 kroków podczas trenowania.
+    - eval_steps=20: Model będzie ewaluowany co 20 kroków podczas trenowania.
+    - logging_steps=1: Wyniki (logi) będą zapisywane co 1 krok, co zapewnia częste logowanie podczas trenowania.
+    - eval_accumulation_steps=5: Wyniki ewaluacji są akumulowane przez 5 kroków przed wykonaniem obliczeń, co zmniejsza zużycie pamięci GPU.
+    - remove_unused_columns=False: Ustawione na False, co oznacza, że kolumny z danych, które nie są bezpośrednio używane w trenowaniu, nie zostaną usunięte.
+    - push_to_hub=False: Model nie zostanie automatycznie opublikowany na platformie Hugging Face Hub.
+    - load_best_model_at_end=True: Po zakończeniu trenowania model zostanie załadowany z najlepszych checkpointów na podstawie wyników ewaluacji.
+    """
+
+    # Klasa, która pozwala na konfigurację parametrów trenowania modelu. Oto omówienie kluczowych argumentów:
+    training_args = TrainingArguments(
+        output_dir= save_path,
+        learning_rate=0.0001,
+        num_train_epochs=n_epochs,
+        per_device_train_batch_size=2,
+        per_device_eval_batch_size=2,
+        save_total_limit=3,
+        evaluation_strategy="steps",
+        save_strategy="steps",
+        save_steps=20,
+        eval_steps=20,
+        logging_steps=1,
+        eval_accumulation_steps=5,
+        remove_unused_columns=False,
+        push_to_hub=False,
+        load_best_model_at_end=True,
+    )
+
+    '''
+    - model=model: Model, który ma być trenowany. W tym przypadku jest to wcześniej załadowany Segformer.
+    - args=training_args: Przekazuje argumenty trenowania, które zostały zdefiniowane wcześniej (np. liczba epok, współczynnik uczenia, częstotliwość zapisywania modelu).
+    - train_dataset=train_ds: Zbiór danych treningowych (np. obrazy rentgenowskie zębów i ich maski).
+    - eval_dataset=valid_ds: Zbiór danych walidacyjnych, na którym model będzie ewaluowany co określoną liczbę kroków.
+    - compute_metrics=compute_metrics: Funkcja służąca do obliczania metryk ewaluacyjnych (np. wynik Dice’a). Funkcja compute_metrics była wcześniej omówiona, a jej zadaniem jest ocena jakości segmentacji modelu.
+    '''
+    # TROCHE NIE ROZUMIEM O CO CHODZI Z TĄ FUNKCJĄ NA DOLE
+    # Ona jest wstawiona tu bo nie wiem jak przekazac num_labels inaczej
+    # Funkcja, która ocenia model na danych walidacyjnych/testowych i oblicza metryki (w tym przypadku wynik Dice'a)
+    def compute_metrics(eval_pred):
+        with torch.no_grad():
+            logits, labels = eval_pred
+            logits_tensor = torch.from_numpy(logits)
+            logits_tensor = nn.functional.interpolate(
+                logits_tensor,
+                size=labels.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            ).argmax(dim=1)
+
+            pred_labels = logits_tensor.detach().cpu().numpy()
+            dice_scores = dice_score(pred_labels, labels, num_labels, ignore_index=255)
+
+            return {"dice_score": dice_scores}
+    
+    # Klasa, która automatyzuje proces trenowania modelu w Hugging Face.
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_ds,
+        eval_dataset=valid_ds,
+        compute_metrics=compute_metrics,
+    )
+
+    # Uruchomienie procesu trenowania
+    trainer.train()
+
+    # Zapisanie wagi i architektury modelu
+    model.save_pretrained(save_path)
+
+    # Zapisanie ekstraktora cech
+    feature_extractor.save_pretrained(save_path)
+    model.save_pretrained(save_path)
 
 
 if __name__ == "__main__":
