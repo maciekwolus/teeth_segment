@@ -241,12 +241,6 @@ def main():
         label2id=label2id
     )
 
-    # TODO - dowiedziec sie czy ten model moze byc (czkeam na info od promotorki)
-    # TODO - sprawdzic czy wszystkie zmienne sa potrzeben (na koniec kodu)
-    # TODO - zrobic gdzies miejsce do trzymania tych todo (moze plik jakis oddzielny)
-    # TODO - zrobic tak zeby to liczylo na GPU
-    # TODO - napisac te dodakowe potrzebne funkcje jeszcze
-    # TODO - sprobowac to przetrenować
 
 if __name__ == "__main__":
     main()
