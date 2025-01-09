@@ -289,8 +289,7 @@ def main():
         label2id=label2id
     )
 
-    # Ścieżka do zapisywania tego co się nauczy 
-    # TODO czy ona sie stworzy sama?
+    # Ścieżka do zapisywania tego co się nauczy - sama sie tworzy
     save_path = data_root_path + r'/segformer-teeth_segment_10ep_b4'
 
     # Wyłączenie integracji z Weights & Biases (W&B) (bez tego chciało ode mnie jakiś klucz czy coś)
