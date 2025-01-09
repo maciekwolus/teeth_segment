@@ -7,13 +7,13 @@ import torch
 import torch.nn as nn
 
 from datasets import Dataset, DatasetDict, Image # working with datasets
-from torchvision.transforms import ColorJitter # randomly modify brightness, contrast and colors of image
+from torchvision.transforms import ColorJitter, Resize, Compose, PILToTensor # randomly modify brightness, contrast and colors of image
 from transformers import SegformerImageProcessor # function from Hugging Face to modify images at the beggining for Segformer model
+from functools import partial
 
 from transformers import SegformerForSemanticSegmentation
 from transformers import SegformerFeatureExtractor
 from transformers import TrainingArguments, Trainer
-from torchvision.transforms import ColorJitter, Resize, Compose, PILToTensor
 from torchvision.transforms.functional import to_tensor
 
 # Test function to display an image using OpenCV.
@@ -156,19 +156,19 @@ def convert_to_black_white(image, threshold=10): # convert to black/white with t
     return bw
 
 # Funkcje to transform datasets
-def train_transforms(example_batch): # transform traning data
+def train_transforms(example_batch):  
+    feature_extractor = SegformerImageProcessor()
     jitter = ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1) # Narzędzie do augmentacji obrazów, które losowo modyfikuje jasność, kontrast, nasycenie i barwę obrazów. Służy do wzbogacania danych treningowych poprzez tworzenie większej różnorodności w danych
-    feature_extractor = SegformerImageProcessor()  # ekstraktor cech (feature extractor) używany do przekształcania obrazów w format, który może być wprowadzony do modelu Segformer
     images = [convert_to_rgb(jitter(x)) for x in example_batch["pixel_values"]] # conversion to RGB and augmentation
     labels = [convert_to_black_white(x) for x in example_batch["label"]] # to black&white with threshhold
-    inputs = feature_extractor(images, labels) # changes pictures to a model needed format
+    inputs = feature_extractor(images=images, segmentation_maps=labels)  # changes pictures to a model needed format
     return inputs
 
-def val_transforms(example_batch, feature_extractor): # just like up, but whitout augmetation
-    feature_extractor = SegformerImageProcessor()  # ekstraktor cech (feature extractor) używany do przekształcania obrazów w format, który może być wprowadzony do modelu Segformer
+def val_transforms(example_batch):  # just like up, but whitout augmetation
+    feature_extractor = SegformerImageProcessor()
     images = [convert_to_rgb(x) for x in example_batch["pixel_values"]]
     labels = [convert_to_black_white(x) for x in example_batch["label"]]
-    inputs = feature_extractor(images, labels)
+    inputs = feature_extractor(images=images, segmentation_maps=labels)  
     return inputs
 
 '''
@@ -202,6 +202,10 @@ prawdopodobieństwa dla każdej klasy, a etykiety to prawdziwe maski segmentacyj
 
 
 def main():
+    # Check if GPU is available (i still dont use it i think)
+    print(torch.cuda.is_available())  # Should print True if GPU is available
+    print(torch.backends.cudnn.enabled)  # Should also print True
+
     # Call test function to display the image
     # show_image(r"C:/mgr/data/kakashi.png")
     
@@ -257,9 +261,16 @@ def main():
     train_ds = dataset["train"]
     valid_ds = dataset["validation"]
 
-    # Setting transformation to datasets
+    # Define transformation (augmentation)
+    feature_extractor = SegformerImageProcessor()  # ekstraktor cech (feature extractor) używany do przekształcania obrazów w format, który może być wprowadzony do modelu Segformer
+
+    # Bind the feature extractor to transformations
     train_ds.set_transform(train_transforms)
     valid_ds.set_transform(val_transforms)
+
+    # Setting transformation to datasets
+    #train_ds.set_transform(train_transforms)
+    #valid_ds.set_transform(val_transforms)
 
     # Wstępnie wytrenowany model, który chcemy załadować. W tym przypadku jest to model Segformer w wersji "nvidia/mit-b4", który jest dostępny w bibliotece Hugging Face
     # Oparty na architekturze MiT-B4 (Mixture of Transformers, wersja B4), który jest dobrze dostosowany do zadań segmentacji semantycznej
@@ -299,7 +310,7 @@ def main():
     - save_strategy="steps": Podobnie jak ewaluacja, zapisywanie modeli (checkpointów) odbywa się co save_steps kroków.
     - save_steps=20: Model będzie zapisywany co 20 kroków podczas trenowania.
     - eval_steps=20: Model będzie ewaluowany co 20 kroków podczas trenowania.
-    - logging_steps=1: Wyniki (logi) będą zapisywane co 1 krok, co zapewnia częste logowanie podczas trenowania.
+    - logging_steps=10: Wyniki (logi) będą zapisywane co 10 krok, co zapewnia częste logowanie podczas trenowania.
     - eval_accumulation_steps=5: Wyniki ewaluacji są akumulowane przez 5 kroków przed wykonaniem obliczeń, co zmniejsza zużycie pamięci GPU.
     - remove_unused_columns=False: Ustawione na False, co oznacza, że kolumny z danych, które nie są bezpośrednio używane w trenowaniu, nie zostaną usunięte.
     - push_to_hub=False: Model nie zostanie automatycznie opublikowany na platformie Hugging Face Hub.
@@ -318,11 +329,12 @@ def main():
         save_strategy="steps",
         save_steps=20,
         eval_steps=20,
-        logging_steps=1,
+        logging_steps=10,
         eval_accumulation_steps=5,
         remove_unused_columns=False,
         push_to_hub=False,
         load_best_model_at_end=True,
+        no_cuda=True,  # Force CPU if needed
     )
 
     '''
@@ -362,9 +374,6 @@ def main():
 
     # Uruchomienie procesu trenowania
     trainer.train()
-
-    # Zapisanie wagi i architektury modelu
-    model.save_pretrained(save_path)
 
     # Zapisanie ekstraktora cech
     feature_extractor.save_pretrained(save_path)
