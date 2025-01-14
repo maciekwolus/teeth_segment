@@ -1,3 +1,4 @@
+import sys
 from transformers import SegformerForSemanticSegmentation, SegformerImageProcessor
 import torch
 import cv2
@@ -5,10 +6,13 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-# Define the path where the model was saved
+# Example run
+# python check_model.py 563
+
+# Define the paths
 save_path = r'C:/mgr/data/segformer-teeth_segment_10ep_b4'
-# Define the mask storage path
 masks_path = r"C:/mgr/data/MASKS"
+valid_images_path = r"C:/mgr/data/VALID_IMAGES"
 
 # Load the model and feature extractor
 model = SegformerForSemanticSegmentation.from_pretrained(save_path)
@@ -17,15 +21,26 @@ feature_extractor = SegformerImageProcessor.from_pretrained(save_path)
 # Ensure the model is in evaluation mode
 model.eval()
 
+# Get the image number from command-line argument
+if len(sys.argv) < 2:
+    print("Usage: python check_model.py <image_number>")
+    sys.exit(1)
+
+image_number = sys.argv[1]  # Get the input image number
+image_path = f"{valid_images_path}/{image_number}.jpg"  # Construct full path
+
 # Prepare an Image for Inference
 def preprocess_image(image_path):
     image = Image.open(image_path).convert("RGB")  # Load image and convert to RGB
     inputs = feature_extractor(images=image, return_tensors="pt")  # Process the image
     return inputs
 
-# Example image
-image_path = r"C:/mgr/data/VALID_IMAGES/6.jpg"  # Change this to an actual test image path
-inputs = preprocess_image(image_path)
+# Check if the file exists
+try:
+    inputs = preprocess_image(image_path)
+except FileNotFoundError:
+    print(f"Error: Image {image_number}.jpg not found in {valid_images_path}")
+    sys.exit(1)
 
 # Run Inference
 with torch.no_grad():  # Disable gradient calculations for inference
@@ -48,40 +63,17 @@ with torch.no_grad():  # Disable gradient calculations for inference
     if predicted_labels.size == 0:
         raise ValueError("Segmentation mask is empty. Check model outputs.")
 
-#  Dice Score = 2×∣A∩B∣​/(∣A∣+∣B∣)
-"""
-1.0 = Perfect segmentation
-0.9+ - Excellent segmentation
-0.8 - 0.9 = Good segmentation
-0.6 - 0.8 = Acceptable, but could improve
-< 0.6 = Poor segmentation, model needs improvement
-"""
+# Function to compute Dice Score
 def dice_score(predicted_mask, ground_truth_mask):
-    """
-    Compute Dice Score between predicted and ground-truth masks.
-    
-    Args:
-        predicted_mask (numpy.ndarray): Model's predicted segmentation mask.
-        ground_truth_mask (numpy.ndarray): Ground-truth mask from dataset.
-        
-    Returns:
-        float: Dice Score (between 0 and 1)
-    """
-    # Ensure masks are binary (0 or 1)
     predicted_mask = (predicted_mask > 0).astype(np.uint8)
     ground_truth_mask = (ground_truth_mask > 0).astype(np.uint8)
-
-    # Calculate intersection and sum
     intersection = np.logical_and(predicted_mask, ground_truth_mask).sum()
     total_pixels = predicted_mask.sum() + ground_truth_mask.sum()
-
-    # Avoid division by zero
+    
     if total_pixels == 0:
         return 1.0 if intersection == 0 else 0.0
-
-    # Compute Dice Score
-    dice = (2.0 * intersection) / total_pixels
-    return dice
+    
+    return (2.0 * intersection) / total_pixels
 
 # Visualize the Results
 def display_segmentation(image_path, mask, masks_path):
@@ -98,7 +90,7 @@ def display_segmentation(image_path, mask, masks_path):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert OpenCV BGR to RGB
 
     # Get the corresponding mask filename
-    mask_filename = image_path.split("/")[-1]  # Extract filename (assumes same name structure)
+    mask_filename = image_path.split("/")[-1]  # Extract filename
     ground_truth_mask_path = f"{masks_path}/{mask_filename}"  # Path to ground-truth mask
 
     # Load ground-truth mask
