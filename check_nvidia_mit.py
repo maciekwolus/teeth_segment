@@ -7,7 +7,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # Example run
-# python check_model.py 563
+# python check_nvidia_mit.py 563
 
 # Define the paths
 save_path = r'C:/mgr/data/segformer-teeth_segment_10ep_b4'
@@ -23,7 +23,7 @@ model.eval()
 
 # Get the image number from command-line argument
 if len(sys.argv) < 2:
-    print("Usage: python check_model.py <image_number>")
+    print("Usage: python check_nvidia_mit.py <image_number>")
     sys.exit(1)
 
 image_number = sys.argv[1]  # Get the input image number
