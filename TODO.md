@@ -1,12 +1,14 @@
 [done] dowiedziec sie czy ten model moze byc (czkeam na info od promotorki) - tak moze byc, ale tez porownac do jakiegos starego
-[] sprawdzic czy wszystkie zmienne sa potrzeben (na koniec kodu)
 [done] zrobic gdzies miejsce do trzymania tych todo (moze plik jakis oddzielny)
-[] zrobic tak zeby to liczylo na GPU
+[done] zrobic tak zeby to liczylo na GPU
 [done] napisac te dodakowe potrzebne funkcje jeszcze
 [dpme] sprobowac to przetrenować
-[] zrobic kod dla starszego modelu
-[] ogarnąć co to UNET i jak dziala
+[done] zrobic kod dla starszego modelu
 [done] dice_score - zapisywanie do excela
+[] ogarnąć co to UNET i jak dziala
+[] sprawdzic czy wszystkie zmienne sa potrzeben (na koniec kodu)
+[] poprawić skuteczność UNet
+[] zdj 586 - dla nvidia-mit dice score powinien byc 1 bo nic nie ma - poprawić to 
 
 
 
