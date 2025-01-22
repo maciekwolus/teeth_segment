@@ -2,10 +2,13 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
+
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.io import read_image
-import numpy as np
+from torchvision.transforms import RandomHorizontalFlip, RandomRotation, RandomAffine
+from torchvision.transforms.functional import to_pil_image
 
 # Define U-Net Architecture
 class UNet(nn.Module):
@@ -100,8 +103,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data Transform
 transform = transforms.Compose([
+    transforms.Lambda(lambda img: to_pil_image(img)),  # Convert tensor to PIL Image
     transforms.Resize((256, 256)),
     transforms.Grayscale(),
+    RandomHorizontalFlip(),
+    RandomRotation(degrees=15),
+    transforms.ToTensor()  # Convert back to tensor after transformations
 ])
 
 # Datasets and Dataloaders
