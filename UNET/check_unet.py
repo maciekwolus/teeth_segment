@@ -6,7 +6,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from torchvision.io import read_image
-from unet_segmentation import UNet 
+from unet_segmentation_2_added_transformation import UNet # has to be proper
 
 # Example run:
 # python check_unet.py 563
@@ -19,7 +19,8 @@ valid_images_path = "C:/mgr/data/VALID_IMAGES"
 
 # Load the model
 model = UNet()
-model.load_state_dict(torch.load(save_path))
+model.load_state_dict(torch.load(save_path, weights_only=True))
+
 #model.load_state_dict(torch.load(save_path, weights_only=True))
 model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,6 +80,9 @@ def display_segmentation(image_path, predicted_mask, masks_path):
 
     # Load the original image
     image = cv2.imread(image_path)
+    if image is None:
+        print(f"Error: Could not read image at {image_path}")
+        return
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert OpenCV BGR to RGB
 
     # Get the corresponding mask filename
@@ -87,17 +91,22 @@ def display_segmentation(image_path, predicted_mask, masks_path):
 
     # Load ground-truth mask
     ground_truth_mask = cv2.imread(ground_truth_mask_path, cv2.IMREAD_GRAYSCALE)
-
-    # Ensure ground-truth mask is valid
     if ground_truth_mask is None:
-        print(f"Warning: Ground-truth mask not found at {ground_truth_mask_path}")
+        print(f"Warning: Ground-truth mask not found or could not be read at {ground_truth_mask_path}")
         return
 
     # Resize predicted mask to match original image size
-    predicted_mask_resized = cv2.resize(predicted_mask.astype(np.uint8), (image.shape[1], image.shape[0]), interpolation=cv2.INTER_NEAREST)
+    predicted_mask_resized = cv2.resize(predicted_mask.astype(np.uint8),
+                                        (image.shape[1], image.shape[0]),
+                                        interpolation=cv2.INTER_NEAREST)
+
+    # Resize ground-truth mask to match predicted mask size
+    ground_truth_mask_resized = cv2.resize(ground_truth_mask,
+                                           (predicted_mask_resized.shape[1], predicted_mask_resized.shape[0]),
+                                           interpolation=cv2.INTER_NEAREST)
 
     # Compute Dice Score
-    dice = dice_score(predicted_mask_resized, ground_truth_mask)
+    dice = dice_score(predicted_mask_resized, ground_truth_mask_resized)
 
     # Overlay predicted mask on the original image
     mask_colored = np.zeros_like(image)
@@ -126,6 +135,7 @@ def display_segmentation(image_path, predicted_mask, masks_path):
     plt.axis("off")
 
     plt.show()
+
 
 # Visualize segmentation
 display_segmentation(image_path, predicted_mask, masks_path)

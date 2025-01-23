@@ -9,6 +9,7 @@
 [] sprawdzic czy wszystkie zmienne sa potrzeben (na koniec kodu)
 [] poprawić skuteczność UNet
 [] zdj 586 - dla nvidia-mit dice score powinien byc 1 bo nic nie ma - poprawić to 
+[] dowiedzieć się czym jest ten criterion
 
 
 

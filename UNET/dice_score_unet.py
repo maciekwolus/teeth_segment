@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from torchvision import transforms
-from unet_segmentation import UNet
+from unet_segmentation_5_COMBO_2_3 import UNet # has to be proper
 
 # Paths
 save_path = "C:/mgr/data/unet_teeth_segmentation.pth"
