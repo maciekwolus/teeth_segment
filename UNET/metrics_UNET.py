@@ -9,13 +9,14 @@ from torchvision import transforms
 from datetime import datetime  # For timestamp
 
 # Variables to change
-from unet_segmentation_5_COMBO_2_3 import UNet  # Ensure this import is from correct file
+from unet_segmentation_final import UNet  # Ensure this import is from correct file
+save_path = "C:/mgr/data/UNET/unet_best.pth" # Name of saved model must be correct
+
 # Generate filename with current timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 file_name = f"metrics_UNET_{timestamp}.xlsx"
 
 # Paths
-save_path = "C:/mgr/data/unet_teeth_segmentation.pth"
 masks_path = "C:/mgr/data/MASKS"
 valid_images_path = "C:/mgr/data/VALID_IMAGES"
 output_excel_path = os.path.join("C:/mgr/data/METRICS_OUTPUT", file_name)
