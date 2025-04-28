@@ -181,7 +181,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Training loop
-    n_epochs = 100
+    n_epochs = 20
     best_val_loss = float('inf')
     for epoch in range(1, n_epochs+1):
         train_loss, train_dice = train_epoch(model, train_loader, criterion, optimizer, device)
