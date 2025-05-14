@@ -2,6 +2,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Ustawienie globalnie większej czcionki
+plt.rcParams.update({
+    'font.size': 14,              # Domyślny rozmiar
+    'axes.titlesize': 20,         # Tytuł wykresu
+    'axes.labelsize': 20,         # Etykiety osi
+    'xtick.labelsize': 20,        # Etykiety ticków osi X
+    'ytick.labelsize': 20,        # Etykiety ticków osi Y
+    'legend.fontsize': 20,        # Legenda
+    'figure.titlesize': 20        # Tytuł całej figury (jeśli używany)
+})
+
 # Wczytanie danych
 file_path = r"C:\mgr\teeth_segment\RESULTS\unet_loss_function.xlsx"
 df = pd.read_excel(file_path)
@@ -15,7 +26,7 @@ bar_width = 0.12
 
 # Podział na 2 grupy po 3 funkcje straty
 groups = [df.iloc[:3], df.iloc[3:]]
-fig, axes = plt.subplots(nrows=2, figsize=(14, 10), sharey=True)
+fig, axes = plt.subplots(nrows=2, figsize=(16, 10), sharey=True)
 
 for ax, group in zip(axes, groups):
     x = np.arange(len(group))  # 0,1,2 dla 3 funkcji
