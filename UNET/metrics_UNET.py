@@ -9,7 +9,7 @@ from torchvision import transforms
 from datetime import datetime  # For timestamp
 
 # Variables to change
-from unet_segmentation_final import UNet  # Ensure this import is from correct file
+from unet_segmentation_TverskyLoss import UNet  # Ensure this import is from correct file
 save_path = "C:/mgr/data/UNET/unet_best.pth" # Name of saved model must be correct
 
 # Generate filename with current timestamp
