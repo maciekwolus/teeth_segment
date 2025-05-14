@@ -23,7 +23,7 @@ class DoubleConv(nn.Module):
             nn.Conv2d(mid_ch, out_ch, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
-            nn.Dropout2d(p=0.3)
+            nn.Dropout2d(p=0.1)
         )
 
     def forward(self, x):
@@ -205,11 +205,11 @@ if __name__ == "__main__":
 
     # Model, Optimizer, Scheduler
     model     = UNet(n_channels=1, n_classes=1, bilinear=True).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
     # Training loop
-    n_epochs = 75
+    n_epochs = 50
     best_val_loss = float('inf')
     start_time = time.time()
     for epoch in range(1, n_epochs+1):
