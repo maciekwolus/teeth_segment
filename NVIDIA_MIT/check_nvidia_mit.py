@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # python check_nvidia_mit.py 563
 
 # Define the paths
-save_path = r'C:/mgr/data/segformer-teeth_segment_10ep_b4'
+save_path = r'C:/mgr/data/SEGFORMER/3'
 masks_path = r"C:/mgr/data/MASKS"
 valid_images_path = r"C:/mgr/data/VALID_IMAGES"
 

@@ -6,14 +6,14 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from torchvision.io import read_image
-from unet_segmentation_2_added_transformation import UNet # has to be proper
+from unet_segmentation_TverskyLoss import UNet # has to be proper
 
 # Example run:
 # python check_unet.py 563
 
 
 # Define paths
-save_path = "C:/mgr/data/unet_teeth_segmentation.pth"
+save_path = "C:/mgr/data/UNET/unet_best_1.pth"
 masks_path = "C:/mgr/data/MASKS"
 valid_images_path = "C:/mgr/data/VALID_IMAGES"
 

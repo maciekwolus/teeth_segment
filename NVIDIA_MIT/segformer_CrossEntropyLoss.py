@@ -199,10 +199,10 @@ def main():
     os.environ["WANDB_DISABLED"] = "true"
     args = TrainingArguments(
         output_dir=save_dir,
-        learning_rate=1e-4,
+        learning_rate=0.0001,
         num_train_epochs=10,
-        per_device_train_batch_size=1,
-        per_device_eval_batch_size=1,
+        per_device_train_batch_size=4,
+        per_device_eval_batch_size=4,
         save_total_limit=3,
         evaluation_strategy="steps",
         save_strategy="steps",

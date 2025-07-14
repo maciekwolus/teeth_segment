@@ -17,7 +17,7 @@ file_name = f"metrics_SEGFORMER_{timestamp}.xlsx"
 valid_images_path = r"C:/mgr/data/VALID_IMAGES"
 masks_path = r"C:/mgr/data/MASKS"
 output_excel_path = os.path.join(r"C:/mgr/data/METRICS_OUTPUT", file_name)
-save_path = r"C:/mgr/data/segformer-teeth_segment_10ep_b4_GPU"  # replace with your SegFormer checkpoint path
+save_path = r"C:/mgr/data/SEGFORMER/13"  # replace with your SegFormer checkpoint path
 
 # Ensure output directory exists
 os.makedirs(os.path.dirname(output_excel_path), exist_ok=True)
