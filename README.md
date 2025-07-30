@@ -2,6 +2,8 @@
 
 This project compares two semantic segmentation architectures — the classical **U-Net** and the transformer-based **SegFormer (MiT-B4)** — for the task of detecting and segmenting teeth in panoramic dental X-ray images. It was developed as part of my master’s thesis in applied computer science and explores deep learning's potential in assisting digital dentistry diagnostics.
 
+Important part - images were resized because my hardware could not handle training at the original resolution.
+
 ---
 
 ## 🧠 Project Overview
@@ -28,22 +30,6 @@ Accurate segmentation of dental X-rays is a crucial step in building intelligent
 
 ---
 
-## 🔬 Models & Techniques
-
-### ✅ U-Net Model
-- Custom PyTorch implementation
-- Trained with **Tversky Loss** (α=0.3, β=0.7) to handle class imbalance
-- Dice coefficient for evaluation
-- Image size reduced to `256x256` due to GPU memory constraints
-
-### 🔷 SegFormer Model
-- Pretrained **nvidia/mit-b4** encoder from Hugging Face Transformers
-- Fine-tuned for binary segmentation (`teeth` vs `background`)
-- Uses **Cross-Entropy Loss** with Dice score metric
-- Benefits from global attention and transformer-based feature extraction
-
----
-
 ## 📦 Tech Stack
 
 - Python 3.10
@@ -55,30 +41,22 @@ Accurate segmentation of dental X-rays is a crucial step in building intelligent
 
 ---
 
-## ⚙️ Training Details
-
-| Parameter               | U-Net                   | SegFormer               |
-|------------------------|-------------------------|-------------------------|
-| Input Size             | 256×256                 | 256×256                 |
-| Loss Function          | Tversky Loss            | Cross-Entropy Loss      |
-| Optimizer              | Adam                    | Adam                    |
-| Metrics                | Dice Score              | Dice Score              |
-| Epochs                 | 50                      | 10                      |
-| Batch Size             | 8                       | 4                       |
-| Scheduler              | ReduceLROnPlateau       | -                       |
-
----
-
 ## 📈 Results Summary
 
 - Both models performed comparably on standard metrics.
 - **SegFormer** delivered sharper contours and better preserved tooth shapes, making it a promising candidate for clinical use.
 - **U-Net** was faster to train but less effective at capturing fine details.
 
----
+### 📊 Quantitative Results
 
-## 🚀 How to Run
+The table below summarizes the performance of both models — **U-Net** and **SegFormer (MiT-B4)** — evaluated on the validation dataset. All models were trained using the same preprocessing and augmentation pipeline to ensure a fair comparison.
 
-### U-Net Training
-```bash
-python unet_segmentation_TverskyLoss.py
+| Model      | Accuracy | Precision | Recall  | Dice Score | F2 Score | Jaccard Index |
+|------------|----------|-----------|---------|------------|----------|----------------|
+| **U-Net**     | 0.9491   | 0.7513    | 0.9215  | 0.8261     | 0.8803   | 0.7069         |
+| **SegFormer** | 0.9681   | 0.8909    | 0.8440  | 0.8657     | 0.8523   | 0.7711         |
+
+### 🖼️ Sample Segmentation Results
+
+Below is an example illustrating the performance of the trained model on a validation image.
+<img width="990" height="1805" alt="example" src="https://github.com/user-attachments/assets/e722efe6-ad01-478d-ba2c-a055f26e5ad5" />
